@@ -46,27 +46,24 @@ jobs:
         sudo apt-get update
         sudo apt-get install trivy
  
-    - name: Authenticate to cluster
-      run: |
-          gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
-    
+ 
 
-    - name: Scan dependencies
-      run: |
-        trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
-    - name: Convert JSON to PDF
-      run: |
-        convert_script=$(cat << 'EOF'
-        pandoc -f json -o deploymentreport.pdf deploymentreport.json
-        EOF
-        )
-        eval "$convert_script"
+    # - name: Scan dependencies
+    #   run: |
+    #     trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
+    # - name: Convert JSON to PDF
+    #   run: |
+    #     convert_script=$(cat << 'EOF'
+    #     pandoc -f json -o deploymentreport.pdf deploymentreport.json
+    #     EOF
+    #     )
+    #     eval "$convert_script"
   
-    - name: Upload PDF artifact
-      uses: actions/upload-artifact@v4.3.1
-      with:
-        name: trivy_scan_report
-        path: report.pdf
+    # - name: Upload PDF artifact
+    #   uses: actions/upload-artifact@v4.3.1
+    #   with:
+    #     name: trivy_scan_report
+    #     path: report.pdf
 
 
     - name: Authenticate with Google Cloud
@@ -103,9 +100,9 @@ jobs:
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
        
-    # - name: Authenticate to cluster
-    #   run: |
-    #     gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
+    - name: Authenticate to cluster
+      run: |
+        gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
 
     - name: Deploy to Google Kubernetes Engine 🚀
       env:
@@ -118,3 +115,23 @@ jobs:
         sed -i'' -e "s|imageTag|${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG|g" $YML_FILE
         cat $YML_FILE
         kubectl apply -f $YML_FILE
+
+    
+    - name: Scan dependencies
+      run: |
+        trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
+
+    - name: Convert JSON to PDF
+      run: |
+        convert_script=$(cat << 'EOF'
+        pandoc -f json -o deploymentreport.pdf deploymentreport.json
+        EOF
+        )
+        eval "$convert_script"
+    
+    - name: Upload PDF artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: trivy_scan_report
+        path: report.pdf
+  
