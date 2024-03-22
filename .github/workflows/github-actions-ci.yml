@@ -72,7 +72,7 @@ jobs:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: gcr.io/persequi/us-central1-docker.pkg.dev/persequi/clusterfck:$IMAGE_TAG
+        image-ref: 'gcr.io/persequi/us-central1-docker.pkg.dev/persequi/clusterfck:$IMAGE_TAG'
         exit-code: '1'
         ignore-unfixed: true
         vuln-type: 'os,library'
