@@ -110,7 +110,8 @@ jobs:
     - name: Convert JSON to PDF
       run: |
         convert_script=$(cat << 'EOF'
-        jq . deploymentreport.json | pandoc -f html -o deploymentreport.pdf
+        jq . deploymentreport.json | jq -r 'to_entries|map("\(.key):\n\(.value|tostring)\n")[]' > deploymentreport.md
+        pandoc -f markdown -o deploymentreport.pdf deploymentreport.md
         EOF
         )
         eval "$convert_script"
