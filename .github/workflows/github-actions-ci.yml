@@ -101,21 +101,21 @@ jobs:
         kubectl apply -f $YML_FILE
 
     
-    - name: Scan dependencies
-      run: |
-        trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
+    # - name: Scan dependencies
+    #   run: |
+    #     trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
 
-    - name: Convert JSON to PDF
-      run: |
-        convert_script=$(cat << 'EOF'
-        pandoc -f json -o deploymentreport.pdf deploymentreport.json
-        EOF
-        )
-        eval "$convert_script"
+    # - name: Convert JSON to PDF
+    #   run: |
+    #     convert_script=$(cat << 'EOF'
+    #     pandoc -f json -o deploymentreport.pdf deploymentreport.json
+    #     EOF
+    #     )
+    #     eval "$convert_script"
     
-    - name: Upload PDF artifact
-      uses: actions/upload-artifact@v4.3.1
-      with:
-        name: trivy_scan_report
-        path: report.pdf
+    # - name: Upload PDF artifact
+    #   uses: actions/upload-artifact@v4.3.1
+    #   with:
+    #     name: trivy_scan_report
+    #     path: report.pdf
   
