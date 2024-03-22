@@ -86,7 +86,7 @@ jobs:
        
     - name: Authenticate to cluster
       run: |
-        gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
+        gcloud container clusters get-credentials clusterfck --zone us-central1-c --project ${{ env.GCP_PROJECT }}
 
     - name: Deploy to Google Kubernetes Engine 🚀
       env:
