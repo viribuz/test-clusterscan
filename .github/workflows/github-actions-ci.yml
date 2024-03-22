@@ -72,16 +72,13 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'gcr.io/persequi/us-central1-docker.pkg.dev/persequi/clusterfck:${{ github.sha }}'
-        exit-code: '1'
-        ignore-unfixed: true
-        vuln-type: 'os,library'
         format: 'sarif'
-        # template: '@/contrib/sarif.tpl'
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
+      if: always()
       with:
         sarif_file: 'trivy-results.sarif'  
        
