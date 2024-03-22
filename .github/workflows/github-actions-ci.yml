@@ -17,8 +17,8 @@ env:
   GCP_PROJECT: persequi
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
   GCR_REGISTRY: gcr.io/${{ secrets.GCP_PROJECT }}
-  GCR_REPOSITORY: us-central1-docker.pkg.dev/persequi/veribuzimgrepo
-  K8S_NAMESPACE: dev
+  GCR_REPOSITORY: us-central1-docker.pkg.dev/persequi/clusterfck
+  K8S_NAMESPACE: live
   K8S_DEPLOYMENT_NAME: app-deployment
 
 jobs:
@@ -34,6 +34,29 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
+    - name: Install Pandoc
+      run: |
+        sudo apt-get update
+        sudo apt-get install pandoc
+
+    - name: Scan dependencies
+      run: |
+        trivy filesystem --input package.json --type npm --format json > packagesreport.json
+        trivy k8s deployment/app-deployment --namespace live --format json > deploymentreport.json
+    - name: Convert JSON to PDF
+      run: |
+        convert_script=$(cat << 'EOF'
+        pandoc -f json -o packagesreport.pdf packagesreport.json
+        pandoc -f json -o deploymentreport.pdf deploymentreport.json
+        EOF
+        )
+        eval "$convert_script"
+  
+    - name: Upload PDF artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: trivy_scan_report
+        path: report.pdf
 
 
     - name: Authenticate with Google Cloud
@@ -57,7 +80,8 @@ jobs:
         docker build --no-cache -t ${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG .
         docker push ${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$GCR_REGISTRY/$GCR_REPOSITORY:$IMAGE_TAG"
-
+    
+  
        
     - name: Set up kubectl
       run: |
