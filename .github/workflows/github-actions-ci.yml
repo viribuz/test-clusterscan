@@ -119,5 +119,5 @@ jobs:
       uses: actions/upload-artifact@v4.3.1
       with:
         name: trivy_scan_report
-        path: report.pdf
+        path: deploymentreport.pdf
   
