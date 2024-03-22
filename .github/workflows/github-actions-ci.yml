@@ -20,7 +20,7 @@ env:
   GCR_REGISTRY: gcr.io/${GCP_PROJECT}
   GCR_REPOSITORY: us-central1-docker.pkg.dev/persequi/clusterfck
   K8S_NAMESPACE: live
-  K8S_DEPLOYMENT_NAME: app-deployment
+  K8S_DEPLOYMENT_NAME: app-deployment-1
 
 jobs:
   deploy:
