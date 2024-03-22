@@ -45,7 +45,11 @@ jobs:
         echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
         sudo apt-get update
         sudo apt-get install trivy
-      
+ 
+    - name: Authenticate to cluster
+      run: |
+          gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
+    
 
     - name: Scan dependencies
       run: |
@@ -99,9 +103,9 @@ jobs:
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
        
-    - name: Set up kubectl
-      run: |
-        gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
+    # - name: Authenticate to cluster
+    #   run: |
+    #     gcloud container clusters get-credentials cluster-1 --zone us-central1-f --project ${{ env.GCP_PROJECT }}
 
     - name: Deploy to Google Kubernetes Engine 🚀
       env:
