@@ -11,6 +11,8 @@ on:
 permissions:
   id-token: write
   contents: read
+  security-events: write
+
 
 env:
   GCP_PROJECT: persequi
