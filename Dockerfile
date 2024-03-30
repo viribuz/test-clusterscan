@@ -1,52 +1,36 @@
-# Build stage 
-# FROM node:18.14 AS build 
-FROM node:18-alpine AS build
+# Start from the official golang image
+FROM golang:buster as builder
 
+# Add Maintainer Info
+LABEL maintainer="Your Name <your.email@example.com>"
 
-WORKDIR /usr/app 
+# Set the Current Working Directory inside the container
+WORKDIR /app
 
-# Copy package.json and package-lock.json 
+# Copy go mod and sum files
+COPY go.mod go.sum ./
 
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
+RUN go mod download
 
-# RUN npm install -g yarn
-COPY package*.json yarn.lock ./ 
-COPY package*.json .
-# Install npm packages, including sharp --tried replacing with yarn instead of npm
-RUN yarn install
+# Copy the source from the current directory to the Working Directory inside the container
+COPY . .
 
+# Build the Go app
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Copy the rest of your application's code 
-COPY . . 
+######## Start a new stage from scratch #######
+FROM debian:buster-slim  
 
-# Build your application 
-# RUN npm install
-# RUN npm run build 
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-RUN yarn install
-RUN npm install chart.js@^4.1.1
-RUN yarn build
-# Production stage 
-#FROM node:18-bullseye 
-FROM node:18-alpine 
+WORKDIR /root/
 
-WORKDIR /usr/app 
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/main .
 
-# Copy built files from the build stage 
-COPY --from=build /usr/app/package*.json /usr/app/yarn.lock ./
-COPY --from=build /usr/app/build ./build
+# Expose port 8080 to the outside world
+EXPOSE 8080
 
-#RUN npm ci --force
-#RUN npm ci
-#RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && yarn install --production
-RUN yarn install --production
-RUN yarn global add serve
-
-#--frozen-lockfile
-
-# Expose the port the app runs on 
-ENV REACT_APP_API_URL=http://localhost:4000
-EXPOSE 3000 
-
-# Start the application 
-CMD ["serve", "-s", "build", "-l", "3000"]
-
+# Command to run the executable
+CMD ["./main"] 
