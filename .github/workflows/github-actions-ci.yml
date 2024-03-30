@@ -102,14 +102,22 @@ jobs:
       run: |
         trivy k8s --format json --output results.json --severity CRITICAL,HIGH deployment/app-deployment-1 --namespace live
 
-    - name: Convert JSON to PDF
-      run: |
-        jq -r 'to_entries | .[] | "\(.key):\n\(.value|tostring)\n"' results.json > deploymentreport.md
-        pandoc -f markdown -o deploymentreport.pdf deploymentreport.md
-    
-    - name: Upload PDF artifact
-      uses: actions/upload-artifact@v4.3.1
+    - name: Run Trivy vulnerability scanner on Kubernetes YAML
+      uses: aquasecurity/trivy-action@master
       with:
-        name: trivy_scan_report
-        path: deploymentreport.pdf
+        scan-type: 'k8s'
+        template: 'manifests/deployment.yaml' # Replace with the path to your Kubernetes manifest file
+        format: 'sarif'
+        output: 'trivy-k8s-results.sarif' # Different output file for k8s scan results
+        severity: 'CRITICAL,HIGH'
+    # - name: Convert JSON to PDF
+    #   run: |
+    #     jq -r 'to_entries | .[] | "\(.key):\n\(.value|tostring)\n"' results.json > deploymentreport.md
+    #     pandoc -f markdown -o deploymentreport.pdf deploymentreport.md
+    
+    # - name: Upload PDF artifact
+    #   uses: actions/upload-artifact@v4.3.1
+    #   with:
+    #     name: trivy_scan_report
+    #     path: deploymentreport.pdf
   
