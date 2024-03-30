@@ -100,7 +100,7 @@ jobs:
 
     - name: Scan kubernetes deployment with Trivy
       run: |
-        trivy k8s --format json --output results.json --severity CRITICAL,HIGH deployment/app-deployment-1 --namespace live
+        trivy k8s --vuln-type os,library --format sarif --output trivy-k8s-results.sarif deployment/app-deployment-1 --namespace live
 
     - name: Run Trivy vulnerability scanner on Kubernetes YAML
       uses: aquasecurity/trivy-action@master
