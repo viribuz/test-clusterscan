@@ -17,11 +17,11 @@ spec:
         - name: my-live-container
           image: imageTag
           ports:
-            - containerPort: 3000
+            - containerPort: 8080
           startupProbe:
             httpGet:
               path: /
-              port: 3000
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 5
       affinity:
