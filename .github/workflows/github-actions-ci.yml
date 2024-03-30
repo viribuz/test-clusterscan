@@ -1,0 +1,116 @@
+name: Deploy app to GKE
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+
+env:
+  GCP_PROJECT: persequi
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  GCR_REGISTRY: gcr.io/${GCP_PROJECT}
+  GCR_REPOSITORY: us-central1-docker.pkg.dev/persequi/clusterfck
+  K8S_NAMESPACE: live
+  K8S_DEPLOYMENT_NAME: app-deployment-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.1
+
+  
+    - name: Install Pandoc
+      run: |
+        sudo apt-get update
+        sudo apt-get install pandoc
+    - name: Install Trivy & jq & texlive
+      run: |
+        sudo apt-get install wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
+        sudo apt-get install jq
+        sudo apt-get install -y texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
+ 
+
+    - name: Authenticate with Google Cloud
+      run: |
+        echo '${{ secrets.GCP_SA_KEY }}' > sa_key.json
+        gcloud auth activate-service-account --key-file=sa_key.json
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2.1.0
+    
+    - name: Install gke-gcloud-auth-plugin
+      run: gcloud components install gke-gcloud-auth-plugin
+       
+    - name: Authenticate with GCR
+      run: gcloud auth configure-docker
+
+    - name: Build, tag, and push image to Google Container Registry
+      env:  
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build --no-cache -t ${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG .
+        docker push ${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG
+        echo "::set-output name=image::$GCR_REGISTRY/$GCR_REPOSITORY:$IMAGE_TAG"
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'gcr.io/persequi/us-central1-docker.pkg.dev/persequi/clusterfck:${{ github.sha }}'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'  
+       
+    - name: Authenticate to cluster
+      run: |
+        gcloud container clusters get-credentials clusterfck --zone us-central1-c --project ${{ env.GCP_PROJECT }}
+
+    - name: Deploy to Google Kubernetes Engine 🚀
+      env:
+        DIRECTORY: manifests
+        YML_FILE: deployment.yaml
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "${{ github.sha }}"
+        cd $DIRECTORY
+        sed -i'' -e "s|imageTag|${{ env.GCR_REGISTRY }}/$GCR_REPOSITORY:$IMAGE_TAG|g" $YML_FILE
+        cat $YML_FILE
+        kubectl apply -f $YML_FILE
+
+    
+    - name: Scan kubernetes deployment with Trivy
+      run: |
+        trivy k8s deployment/app-deployment-1 --namespace live --format json > deploymentreport.json
+
+    - name: Convert JSON to PDF
+      run: |
+        jq -r 'to_entries | .[] | "\(.key):\n\(.value|tostring)\n"' deploymentreport.json > deploymentreport.md
+        pandoc -f markdown -o deploymentreport.pdf deploymentreport.md
+    
+    - name: Upload PDF artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: trivy_scan_report
+        path: deploymentreport.pdf
+  
